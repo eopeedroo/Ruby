@@ -23,6 +23,7 @@ app.config['MYSQL_USER'] = os.environ.get('MYSQL_USER', 'root')
 app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQL_PASSWORD', 'hfziFkZcOmQaABJIEwwteqbmamWpHnsC')
 app.config['MYSQL_DB'] = os.environ.get('MYSQL_DB', 'railway')
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
+app.config['MYSQL_SSL'] = {'ssl': {}}
 
 mysql = MySQL(app)
 
