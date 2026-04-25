@@ -779,7 +779,17 @@
         if (project.status_nome !== 'NÃO INICIADO' && (currentUser.user_role === 'ADMINISTRADOR' || currentUser.user_role === 'SOLICITANTE' || (project.colaborador_nome && project.colaborador_nome.includes(currentUser.user_name)))) {
             actionButtons += `<button data-project-id="${project.idDemandas}" data-project-name="${project.titulo}" class="btn-andamento bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-3 rounded-lg text-xs shadow-sm transform hover:scale-105" title="Atualizar Andamento"><i class="fa-solid fa-person-running"></i></button>`;
         }
-        
+        if (currentUser.user_role === 'ADMINISTRADOR' || currentUser.user_role === 'SOLICITANTE') {
+    actionButtons += `
+        <button 
+            data-project-id="${project.idDemandas}" 
+            data-project-name="${project.titulo}"
+            class="btn-delete-project bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-2 px-3 rounded-lg text-xs shadow-sm transform hover:scale-105"
+            title="Excluir Projeto">
+            <i class="fa-solid fa-trash"></i>
+        </button>
+    `;
+}
         return `
             <div class="project-card bg-white rounded-xl shadow-lg p-6 flex flex-col justify-between border-t-4 ${statusInfo.border}">
                 <div>
@@ -801,6 +811,7 @@
                     <div class="flex items-center justify-end gap-2">${actionButtons}</div>
                 </div>
             </div>`;
+        
     }
 
     // Renderiza a lista de usuários
@@ -963,6 +974,18 @@
         if (!confirm(`Tem certeza que deseja excluir o usuário "${userName}"?`)) return;
         handleApiFormSubmit(`/api/users/${userId}`, 'DELETE', null, null, loadUsers);
     }
+    // Deleta um projeto
+    function deleteProject(projectId, projectName) {
+    if (!confirm(`Tem certeza que deseja excluir o projeto "${projectName}"?`)) return;
+
+    handleApiFormSubmit(
+        `/api/projects/${projectId}`,
+        'DELETE',
+        null,
+        null,
+        loadProjects
+    );
+}
     
     // Manipula a submissão do formulário de urgência
     function handleUrgencyFormSubmit(event) {
@@ -1065,6 +1088,13 @@
         document.querySelectorAll('.btn-adesao').forEach(btn => btn.addEventListener('click', openAdesaoModal));
         document.querySelectorAll('.btn-urgencia').forEach(btn => btn.addEventListener('click', openUrgenciaModal));
         document.querySelectorAll('.btn-andamento').forEach(btn => btn.addEventListener('click', openAndamentoModal));
+       
+        document.querySelectorAll('.btn-delete-project').forEach(btn => 
+        btn.addEventListener('click', (e) => {
+        const { projectId, projectName } = e.currentTarget.dataset;
+        deleteProject(projectId, projectName);
+    })
+);
     }
     
     // Adiciona event listeners aos botões da lista de usuários
