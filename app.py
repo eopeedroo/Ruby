@@ -617,6 +617,58 @@ def update_urgency(project_id):
     finally:
         if cur: cur.close()
 
+@app.route('/api/projects/<int:project_id>', methods=['DELETE'])
+@login_required
+@solicitante_required
+def delete_project(project_id):
+    cur = None
+    try:
+        cur = mysql.connection.cursor()
+
+        query_args = [project_id]
+        permission_query = """
+            SELECT d.titulo 
+            FROM Demandas d
+        """
+
+        if session.get('user_role') != 'ADMINISTRADOR':
+            permission_query += """
+                JOIN Solicitante s ON d.idSolicitante = s.idSolicitante
+                WHERE d.idDemandas = %s 
+                AND s.idColaborador = %s
+            """
+            query_args.append(session.get('user_colaborador_id'))
+        else:
+            permission_query += """
+                WHERE d.idDemandas = %s
+            """
+
+        cur.execute(permission_query, tuple(query_args))
+        project = cur.fetchone()
+
+        if not project:
+            return jsonify({'error': 'Projeto não encontrado ou você não tem permissão para excluí-lo.'}), 404
+
+        cur.execute("DELETE FROM Demandas WHERE idDemandas = %s", (project_id,))
+        mysql.connection.commit()
+
+        log_change(
+            session['user_name'],
+            'PROJETO EXCLUÍDO',
+            f"Projeto '{project['titulo']}' foi excluído."
+        )
+
+        return jsonify({'success': True, 'message': 'Projeto excluído com sucesso!'})
+
+    except Exception as e:
+        if cur:
+            mysql.connection.rollback()
+        print(f"Erro em delete_project: {e}")
+        return jsonify({'error': 'Erro interno ao excluir projeto.'}), 500
+
+    finally:
+        if cur:
+            cur.close()
 
 @app.route('/api/projects/<int:project_id>/adhere', methods=['POST'])
 @login_required
