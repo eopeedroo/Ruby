@@ -573,6 +573,87 @@ def create_project():
         return jsonify({'error': f'Erro ao cadastrar projeto: {str(e)}'}), 500
     finally:
         if cur: cur.close()
+
+@app.route('/api/projects/<int:project_id>', methods=['PUT'])
+@login_required
+@solicitante_required
+def update_project(project_id):
+    cur = None
+    try:
+        data = request.get_json()
+        cur = mysql.connection.cursor()
+
+        query_args = [project_id]
+
+        permission_query = """
+            SELECT d.titulo
+            FROM Demandas d
+        """
+
+        if session.get('user_role') != 'ADMINISTRADOR':
+            permission_query += """
+                JOIN Solicitante s ON d.idSolicitante = s.idSolicitante
+                WHERE d.idDemandas = %s
+                AND s.idColaborador = %s
+            """
+            query_args.append(session.get('user_colaborador_id'))
+        else:
+            permission_query += """
+                WHERE d.idDemandas = %s
+            """
+
+        cur.execute(permission_query, tuple(query_args))
+        project = cur.fetchone()
+
+        if not project:
+            return jsonify({
+                'error': 'Projeto não encontrado ou você não tem permissão para editá-lo.'
+            }), 404
+
+        data_limite = None
+        if data.get('dataLimite'):
+            data_limite = data.get('dataLimite')
+
+        cur.execute("""
+            UPDATE Demandas
+            SET 
+                titulo = %s,
+                descricao = %s,
+                objetivo = %s,
+                dataLimite = %s,
+                supervisor_responsavel = %s
+            WHERE idDemandas = %s
+        """, (
+            data.get('titulo'),
+            data.get('descricao'),
+            data.get('objetivo'),
+            data_limite,
+            data.get('supervisor_responsavel'),
+            project_id
+        ))
+
+        mysql.connection.commit()
+
+        log_change(
+            session['user_name'],
+            'PROJETO ATUALIZADO',
+            f"Projeto '{project['titulo']}' foi atualizado."
+        )
+
+        return jsonify({
+            'success': True,
+            'message': 'Projeto atualizado com sucesso!'
+        })
+
+    except Exception as e:
+        if cur:
+            mysql.connection.rollback()
+        print(f"Erro em update_project: {e}")
+        return jsonify({'error': 'Erro interno ao atualizar projeto.'}), 500
+
+    finally:
+        if cur:
+            cur.close()
             
 @app.route('/api/projects/<int:project_id>/urgency', methods=['PUT'])
 @login_required
